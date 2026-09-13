@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meera — Memory Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --outer: #16211b;
+    --board: #253a2e;
+    --board-edge: #1c2e24;
+    --chalk: #f2efe3;
+    --chalk-dim: rgba(242,239,227,0.32);
+    --chalk-accent: #e8c468;
+    --wood: #5a3a24;
+    --wood-dark: #402812;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at top, #1b2820 0%, var(--outer) 60%);
+    font-family: 'Source Serif 4', Georgia, serif;
+    padding: 32px 16px;
+  }
+
+  .frame {
+    width: 100%;
+    max-width: 720px;
+    background: linear-gradient(180deg, var(--wood), var(--wood-dark));
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.06) inset,
+      0 30px 60px rgba(0,0,0,0.45);
+  }
+
+  .board {
+    background: radial-gradient(ellipse at 30% 0%, var(--board) 0%, var(--board-edge) 100%);
+    border-radius: 8px;
+    padding: 36px 34px 30px;
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.35);
+  }
+
+  .board-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+  }
+
+  h1 {
+    font-family: 'Kalam', cursive;
+    color: var(--chalk);
+    font-weight: 700;
+    font-size: 1.7rem;
+    margin: 0;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 1px rgba(242,239,227,0.35);
+  }
+
+  .progress {
+    font-family: 'Kalam', cursive;
+    color: var(--chalk-accent);
+    font-size: 0.95rem;
+    white-space: nowrap;
+  }
+
+  .rule {
+    border: none;
+    border-top: 1px dashed rgba(242,239,227,0.18);
+    margin: 14px 0 26px;
+  }
+
+  .passage {
+    font-size: 1.35rem;
+    line-height: 2.15;
+    color: var(--chalk);
+    max-width: 62ch;
+  }
+
+  .word {
+    background-color: transparent;
+    border: none;
+    padding: 0 2px;
+    margin: 0 1px;
+    font: inherit;
+    color: var(--chalk);
+    cursor: pointer;
+    border-radius: 3px;
+    position: relative;
+    transition: color 0.25s ease, background-color 0.15s ease, outline-color 0.15s ease;
+  }
+
+  .word:hover {
+    background-color: rgba(232,196,104,0.22);
+  }
+
+  .word:focus-visible {
+    outline: 2px solid var(--chalk-accent);
+    outline-offset: 2px;
+  }
+
+  .word.erased {
+    color: transparent;
+    background-color: rgba(242,239,227,0.10);
+    outline: 1px solid rgba(242,239,227,0.30);
+    outline-offset: -1px;
+  }
+
+  .word.erased:hover {
+    background-color: rgba(232,196,104,0.20);
+    outline-color: rgba(232,196,104,0.55);
+  }
+
+  .controls {
+    margin-top: 30px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  button.action {
+    font-family: 'Kalam', cursive;
+    font-size: 0.95rem;
+    background: transparent;
+    color: var(--chalk-accent);
+    border: 1px solid rgba(232,196,104,0.5);
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  button.action:hover {
+    background-color: rgba(232,196,104,0.12);
+  }
+
+  button.action:focus-visible {
+    outline: 2px solid var(--chalk-accent);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 480px) {
+    .board { padding: 26px 20px 22px; }
+    .passage { font-size: 1.15rem; line-height: 2; }
+    h1 { font-size: 1.4rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .word { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="frame">
+    <div class="board">
+      <div class="board-header">
+        <h1>Meera</h1>
+        <span class="progress"><span id="hiddenCount">0</span>/<span id="totalCount">0</span> erased</span>
+      </div>
+      <hr class="rule">
+      <p class="passage" id="passage"></p>
+      <div class="controls">
+        <button class="action" id="resetBtn">Reset — show all words</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const text = "I'm ten. I live near the school, so I walk in every day. I have lunch at school with my friends. I love drawing and taking photos, so I want to put my photos in the blog and write about the natural world.";
+  const words = text.split(" ");
+  const passageEl = document.getElementById('passage');
+  const hiddenCountEl = document.getElementById('hiddenCount');
+  const totalCountEl = document.getElementById('totalCount');
+
+  words.forEach((word) => {
+    const btn = document.createElement('button');
+    btn.className = 'word';
+    btn.type = 'button';
+    btn.textContent = word;
+    btn.setAttribute('aria-pressed', 'false');
+    btn.addEventListener('click', () => {
+      const nowErased = btn.classList.toggle('erased');
+      btn.setAttribute('aria-pressed', String(nowErased));
+      updateProgress();
+    });
+    passageEl.appendChild(btn);
+    passageEl.appendChild(document.createTextNode(' '));
+  });
+
+  totalCountEl.textContent = words.length;
+
+  function updateProgress() {
+    const erased = passageEl.querySelectorAll('.word.erased').length;
+    hiddenCountEl.textContent = erased;
+  }
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    passageEl.querySelectorAll('.word.erased').forEach(w => {
+      w.classList.remove('erased');
+      w.setAttribute('aria-pressed', 'false');
+    });
+    updateProgress();
+  });
+</script>
+
+</body>
+</html>
